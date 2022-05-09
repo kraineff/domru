@@ -1,0 +1,44 @@
+{
+    "compilerOptions": {
+        // Type Checking
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "strict": true,
+
+        // Modules
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "rootDir": "src",
+        "typeRoots": ["node_modules/@types", "src/types"],
+        "types": ["node"],
+
+        // Emit
+        "declaration": true,
+        "inlineSourceMap": true,
+        "outDir": "build/main",
+
+        // Interop Constraints
+        "esModuleInterop": true,
+
+        // Language and Environment
+        "lib": ["es2017"],
+        "target": "es2017",
+
+        // Compiler Diagnostics
+        "listEmittedFiles": false,
+        "listFiles": false,
+        "traceResolution": false,
+
+        // Projects
+        "incremental": true,
+
+        // Output Formatting
+        "pretty": true
+    },
+    "include": ["src/**/*.ts"],
+    "exclude": ["node_modules/**"],
+    "compileOnSave": false
+}
