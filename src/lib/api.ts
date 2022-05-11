@@ -14,42 +14,66 @@ type LoginDetails = {
     profileId: string | null;
 }
 
-class API extends EventEmitter {
-    operatorId!: number;
-    accessToken!: string;
-    refreshToken!: string;
+class API {
+    private _operatorId!: number;
+    private _accessToken!: string;
+    private _refreshToken!: string;
+    private _ready: boolean;
+
     instance: AxiosInstance;
+    emmiter: EventEmitter;
 
     constructor() {
-        super();
+        this._ready = false;
         this.instance = axios.create();
+        this.emmiter = new EventEmitter();
 
         this.instance.interceptors.request.use(req => {
-            if (!this.accessToken) throw new Error("Нет авторизации");
+            if (!this._ready) throw new Error("Нет авторизации");
             req.headers = {
                 ...req.headers,
-                Authorization: `Bearer ${this.accessToken}`,
-                Operator: String(this.operatorId)
+                Authorization: `Bearer ${this._accessToken}`,
+                Operator: String(this._operatorId)
             };
             return req;
         });
 
         const refresh = async (req: any) => this.refreshTokens().then(res => {
             const { accessToken, refreshToken } = res;
-            this.accessToken = accessToken;
-            this.refreshToken = refreshToken;
-            this.emit("refresh", { accessToken, refreshToken });
+            this._accessToken = accessToken;
+            this._refreshToken = refreshToken;
+            this.emmiter.emit("refresh", { accessToken, refreshToken });
             req.response.config.headers["Authorization"] = `Bearer ${accessToken}`;
             return Promise.resolve();
+        }).catch(err => {
+            this._ready = false;
+            throw err;
         });
 
         createAuthRefreshInterceptor(this.instance, refresh);
     }
 
+    get accessToken() {
+        return this._accessToken;
+    }
+
+    get refreshToken() {
+        return this._refreshToken;
+    }
+
+    get ready() {
+        return this._ready;
+    }
+
+    destroy() {
+        this.emmiter.removeAllListeners();
+    }
+
     setCredentials(options: { operatorId: number, accessToken: string, refreshToken: string }) {
-        this.operatorId = options.operatorId;
-        this.accessToken = options.accessToken;
-        this.refreshToken = options.refreshToken;
+        this._operatorId = options.operatorId;
+        this._accessToken = options.accessToken;
+        this._refreshToken = options.refreshToken;
+        this._ready = true;
     }
 
     async getPlaces(): Promise<SubscriberPlacesResponse> {
@@ -117,8 +141,8 @@ class API extends EventEmitter {
     private async refreshTokens() {
         return axios.get("https://api-mh.ertelecom.ru/auth/v2/session/refresh", {
             headers: {
-                Bearer: this.refreshToken,
-                Operator: String(this.operatorId)
+                Bearer: this._refreshToken,
+                Operator: String(this._operatorId)
             }
         }).then(res => res.data);
     }
