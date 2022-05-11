@@ -77,68 +77,89 @@ class API {
     }
 
     async getPlaces(): Promise<SubscriberPlacesResponse> {
-        return this.instance.get("https://api-mh.ertelecom.ru/rest/v1/subscriberplaces").then(res => res.data);
+        const url = "https://api-mh.ertelecom.ru/rest/v1/subscriberplaces";
+
+        return this.instance.get(url).then(res => res.data);
     }
 
     async getProfile(): Promise<SubscriberProfileResponse> {
-        return this.instance.get("https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles").then(res => res.data);
+        const url = "https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles";
+
+        return this.instance.get(url).then(res => res.data);
     }
 
     async getFinances(): Promise<SubscriberFinancesResponse> {
-        return this.instance.get("https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles/finances").then(res => res.data);
+        const url = "https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles/finances";
+
+        return this.instance.get(url).then(res => res.data);
     }
 
     async getForpostCameras(): Promise<ForpostCamerasResponse> {
-        return this.instance.get("https://api-mh.ertelecom.ru/rest/v1/forpost/cameras").then(res => res.data);
+        const url = "https://api-mh.ertelecom.ru/rest/v1/forpost/cameras";
+
+        return this.instance.get(url).then(res => res.data);
     }
 
     async getCameraSnapshot(cameraId: number) {
-        return this.instance.get(`https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/snapshots`, {
-            responseType: "stream"
-        }).then(res => res.data);
+        const url = `https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/snapshots`;
+
+        return this.instance.get(url, { responseType: "stream" }).then(res => res.data);
     }
 
     async getCameraStream(cameraId: number) {
-        return this.instance.get(`https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/video`).then(res => {
-            const { data } = res.data;
-            if (data.Error) throw new Error(data.Error);
-            return data.URL;
-        }).catch((err: AxiosError) => {
-            const code = err.response?.status;
-            if (code === 500) throw new Error("Неправильный cameraId");
-            throw err;
-        });
+        const url = `https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/video`;
+
+        return this.instance.get(url)
+            .then(res => {
+                const { data } = res.data;
+                if (data.Error) throw new Error(data.Error);
+                return data.URL;
+            })
+            .catch((err: AxiosError) => {
+                const code = err.response?.status;
+                if (code === 500) throw new Error("Неправильный cameraId");
+                throw err;
+            });
     }
 
     async openAccessControl(placeId: number, accessControlId: number) {
-        return this.instance.post(`https://api-mh.ertelecom.ru/rest/v1/places/${placeId}/accesscontrols/${accessControlId}/actions`, {
+        const url = `https://api-mh.ertelecom.ru/rest/v1/places/${placeId}/accesscontrols/${accessControlId}/actions`;
+        const data = {
             name: "accessControlOpen"
-        }).then(() => Promise.resolve())
-        .catch((err: AxiosError) => {
-            const code = err.response?.status;
-            if (code === 500) throw new Error("Неправильный placeId или accessControlId");
-            throw err;
-        });
+        };
+
+        return this.instance.post(url, data)
+            .then(() => Promise.resolve())
+            .catch((err: AxiosError) => {
+                const code = err.response?.status;
+                if (code === 500) throw new Error("Неправильный placeId или accessControlId");
+                throw err;
+            });
     }
 
     async getOperators(): Promise<OperatorsResponse> {
-        return axios.get("https://api-mh.ertelecom.ru/public/v1/operators").then(res => res.data);
+        const url = "https://api-mh.ertelecom.ru/public/v1/operators";
+
+        return axios.get(url).then(res => res.data);
     }
     
     async getLoginDetails(phone: number) {
-        return axios.get(`https://api-mh.ertelecom.ru/auth/v2/login/${phone}`, {
-            validateStatus: (status) => status === 200 || status === 300,
-        }).then(res => (<LoginDetailsResponse>res.data).map(item => ({ phone, ...item })))
-        .catch((err: AxiosError) => {
-            const code = err.response?.status;
-            if (code === 204) throw new Error("Неправильный номер");
-            throw err;
-        });
+        const url = `https://api-mh.ertelecom.ru/auth/v2/login/${phone}`;
+
+        return axios.get(url, { validateStatus: (status) => status === 200 || status === 300 })
+            .then(res => (<LoginDetailsResponse>res.data).map(item => ({ phone, ...item })))
+            .catch((err: AxiosError) => {
+                const code = err.response?.status;
+                if (code === 204) throw new Error("Неправильный номер");
+                throw err;
+            });
     }
     
     async sendConfirmation(loginDetails: LoginDetails) {
-        const { phone, ...details } = loginDetails;
-        return axios.post(`https://api-mh.ertelecom.ru/auth/v2/confirmation/${phone}`, details)
+        const { phone, ...data } = loginDetails;
+        const url = `https://api-mh.ertelecom.ru/auth/v2/confirmation/${phone}`;
+
+        return axios.post(url, data)
             .then(() => Promise.resolve())
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
@@ -148,28 +169,33 @@ class API {
     }
     
     async loginConfirmation(loginDetails: LoginDetails, code: number): Promise<LoginConfirmationResponse> {
-        return axios.post(`https://api-mh.ertelecom.ru/auth/v2/auth/${loginDetails.phone}/confirmation`, {
+        const url = `https://api-mh.ertelecom.ru/auth/v2/auth/${loginDetails.phone}/confirmation`;
+        const data = {
             operatorId: loginDetails.operatorId,
             subscriberId: loginDetails.subscriberId,
             accountId: loginDetails.accountId,
             login: loginDetails.phone,
             confirm1: String(code)
-        }).then(res => res.data)
-        .catch((err: AxiosError) => {
-            const code = err.response?.status;
-            if (code === 409) throw new Error("Неправильные данные авторизации");
-            if (code === 403) throw new Error("Неправильный код подтверждения");
-            throw err;
-        });
+        };
+
+        return axios.post(url, data)
+            .then(res => res.data)
+            .catch((err: AxiosError) => {
+                const code = err.response?.status;
+                if (code === 409) throw new Error("Неправильные данные авторизации");
+                if (code === 403) throw new Error("Неправильный код подтверждения");
+                throw err;
+            });
     }
     
     private async refreshTokens() {
-        return axios.get("https://api-mh.ertelecom.ru/auth/v2/session/refresh", {
-            headers: {
-                Bearer: this._refreshToken,
-                Operator: String(this._operatorId)
-            }
-        }).then(res => res.data);
+        const url = "https://api-mh.ertelecom.ru/auth/v2/session/refresh";
+        const headers = {
+            Bearer: this._refreshToken,
+            Operator: String(this._operatorId)
+        };
+
+        return axios.get(url, { headers }).then(res => res.data);
     }
 }
 
