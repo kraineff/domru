@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosError, AxiosInstance } from "axios";
 import createAuthRefreshInterceptor from "axios-auth-refresh";
 import EventEmitter from "events";
 
@@ -103,13 +103,22 @@ class API {
             const { data } = res.data;
             if (data.Error) throw new Error(data.Error);
             return data.URL;
+        }).catch((err: AxiosError) => {
+            const code = err.response?.status;
+            if (code === 500) throw new Error("Неправильный cameraId");
+            throw err;
         });
     }
 
     async openAccessControl(placeId: number, accessControlId: number) {
         return this.instance.post(`https://api-mh.ertelecom.ru/rest/v1/places/${placeId}/accesscontrols/${accessControlId}/actions`, {
             name: "accessControlOpen"
-        }).then(() => Promise.resolve());
+        }).then(() => Promise.resolve())
+        .catch((err: AxiosError) => {
+            const code = err.response?.status;
+            if (code === 500) throw new Error("Неправильный placeId или accessControlId");
+            throw err;
+        });
     }
 
     async getOperators(): Promise<OperatorsResponse> {
@@ -119,13 +128,23 @@ class API {
     async getLoginDetails(phone: number) {
         return axios.get(`https://api-mh.ertelecom.ru/auth/v2/login/${phone}`, {
             validateStatus: (status) => status === 200 || status === 300,
-        }).then(res => (<LoginDetailsResponse>res.data).map(item => ({ phone, ...item })));
+        }).then(res => (<LoginDetailsResponse>res.data).map(item => ({ phone, ...item })))
+        .catch((err: AxiosError) => {
+            const code = err.response?.status;
+            if (code === 204) throw new Error("Неправильный номер");
+            throw err;
+        });
     }
     
     async sendConfirmation(loginDetails: LoginDetails) {
         const { phone, ...details } = loginDetails;
         return axios.post(`https://api-mh.ertelecom.ru/auth/v2/confirmation/${phone}`, details)
-            .then(() => Promise.resolve());
+            .then(() => Promise.resolve())
+            .catch((err: AxiosError) => {
+                const code = err.response?.status;
+                if (code === 400) throw new Error("Неправильные данные авторизации");
+                throw err;
+            });
     }
     
     async loginConfirmation(loginDetails: LoginDetails, code: number): Promise<LoginConfirmationResponse> {
@@ -135,7 +154,13 @@ class API {
             accountId: loginDetails.accountId,
             login: loginDetails.phone,
             confirm1: String(code)
-        }).then(res => res.data);
+        }).then(res => res.data)
+        .catch((err: AxiosError) => {
+            const code = err.response?.status;
+            if (code === 409) throw new Error("Неправильные данные авторизации");
+            if (code === 403) throw new Error("Неправильный код подтверждения");
+            throw err;
+        });
     }
     
     private async refreshTokens() {
