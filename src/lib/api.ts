@@ -79,37 +79,37 @@ class API {
     async getPlaces(): Promise<SubscriberPlacesResponse> {
         const url = "https://api-mh.ertelecom.ru/rest/v1/subscriberplaces";
 
-        return this.instance.get(url).then(res => res.data);
+        return await this.instance.get(url).then(res => res.data);
     }
 
     async getProfile(): Promise<SubscriberProfileResponse> {
         const url = "https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles";
 
-        return this.instance.get(url).then(res => res.data);
+        return await this.instance.get(url).then(res => res.data);
     }
 
     async getFinances(): Promise<SubscriberFinancesResponse> {
         const url = "https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles/finances";
 
-        return this.instance.get(url).then(res => res.data);
+        return await this.instance.get(url).then(res => res.data);
     }
 
     async getForpostCameras(): Promise<ForpostCamerasResponse> {
         const url = "https://api-mh.ertelecom.ru/rest/v1/forpost/cameras";
 
-        return this.instance.get(url).then(res => res.data);
+        return await this.instance.get(url).then(res => res.data);
     }
 
     async getCameraSnapshot(cameraId: number) {
         const url = `https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/snapshots`;
 
-        return this.instance.get(url, { responseType: "stream" }).then(res => res.data);
+        return await this.instance.get(url, { responseType: "stream" }).then(res => res.data);
     }
 
     async getCameraStream(cameraId: number) {
         const url = `https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/video`;
 
-        return this.instance.get(url)
+        return await this.instance.get(url)
             .then(res => {
                 const { data } = res.data;
                 if (data.Error) throw new Error(data.Error);
@@ -128,7 +128,7 @@ class API {
             name: "accessControlOpen"
         };
 
-        return this.instance.post(url, data)
+        return await this.instance.post(url, data)
             .then(() => Promise.resolve())
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
@@ -140,13 +140,13 @@ class API {
     async getOperators(): Promise<OperatorsResponse> {
         const url = "https://api-mh.ertelecom.ru/public/v1/operators";
 
-        return axios.get(url).then(res => res.data);
+        return await axios.get(url).then(res => res.data);
     }
     
     async getLoginDetails(phone: number) {
         const url = `https://api-mh.ertelecom.ru/auth/v2/login/${phone}`;
 
-        return axios.get(url, { validateStatus: (status) => status === 200 || status === 300 })
+        return await axios.get(url, { validateStatus: (status) => status === 200 || status === 300 })
             .then(res => (<LoginDetailsResponse>res.data).map(item => ({ phone, ...item })))
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
@@ -159,7 +159,7 @@ class API {
         const { phone, ...data } = loginDetails;
         const url = `https://api-mh.ertelecom.ru/auth/v2/confirmation/${phone}`;
 
-        return axios.post(url, data)
+        return await axios.post(url, data)
             .then(() => Promise.resolve())
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
@@ -178,7 +178,7 @@ class API {
             confirm1: String(code)
         };
 
-        return axios.post(url, data)
+        return await axios.post(url, data)
             .then(res => res.data)
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
@@ -195,7 +195,7 @@ class API {
             Operator: String(this._operatorId)
         };
 
-        return axios.get(url, { headers }).then(res => res.data);
+        return await axios.get(url, { headers }).then(res => res.data);
     }
 }
 
