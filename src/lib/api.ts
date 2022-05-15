@@ -15,7 +15,7 @@ type LoginDetails = {
 }
 
 class API {
-    private _operatorId!: number;
+    private _loginDetails!: LoginDetails;
     private _accessToken!: string;
     private _refreshToken!: string;
     private _ready: boolean;
@@ -33,7 +33,7 @@ class API {
             req.headers = {
                 ...req.headers,
                 Authorization: `Bearer ${this._accessToken}`,
-                Operator: String(this._operatorId)
+                Operator: String(this._loginDetails.operatorId)
             };
             return req;
         });
@@ -53,6 +53,10 @@ class API {
         createAuthRefreshInterceptor(this.instance, refresh);
     }
 
+    get loginDetails() {
+        return this._loginDetails;
+    }
+
     get accessToken() {
         return this._accessToken;
     }
@@ -69,8 +73,8 @@ class API {
         this.emmiter.removeAllListeners();
     }
 
-    setCredentials(options: { operatorId: number, accessToken: string, refreshToken: string }) {
-        this._operatorId = options.operatorId;
+    setCredentials(options: { loginDetails: LoginDetails, accessToken: string, refreshToken: string }) {
+        this._loginDetails = options.loginDetails;
         this._accessToken = options.accessToken;
         this._refreshToken = options.refreshToken;
         this._ready = true;
@@ -147,7 +151,10 @@ class API {
         const url = `https://api-mh.ertelecom.ru/auth/v2/login/${phone}`;
 
         return await axios.get(url, { validateStatus: (status) => status === 200 || status === 300 })
-            .then(res => (<LoginDetailsResponse>res.data).map(item => ({ phone, ...item })))
+            .then(res => {
+                return (<LoginDetailsResponse>res.data)
+                    .map(item => ({ phone, ...item }))
+            })
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
                 if (code === 204) throw new Error("Неправильный номер");
@@ -192,7 +199,7 @@ class API {
         const url = "https://api-mh.ertelecom.ru/auth/v2/session/refresh";
         const headers = {
             Bearer: this._refreshToken,
-            Operator: String(this._operatorId)
+            Operator: String(this._loginDetails.operatorId)
         };
 
         return await axios.get(url, { headers }).then(res => res.data);

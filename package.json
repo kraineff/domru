@@ -1,7 +1,7 @@
 {
     "name": "domru",
     "description": "Камеры и устройства доступа Дом.ру",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "main": "build/main/index.js",
     "types": "build/main/index.d.ts",
     "module": "build/module/index.js",

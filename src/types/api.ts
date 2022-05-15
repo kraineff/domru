@@ -43,7 +43,7 @@ export type LoginConfirmationResponse = {
 export type SubscriberPlacesResponse = {
     data: {
         id: number;
-        subscriberType: string;
+        subscriberType: "owner" | "guest";
         subscriberState: string;
         place: {
             id: number;
