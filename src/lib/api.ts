@@ -20,15 +20,15 @@ class API {
     private _refreshToken!: string;
     private _ready: boolean;
 
-    instance: AxiosInstance;
-    emmiter: EventEmitter;
+    private _instance: AxiosInstance;
+    private _emmiter: EventEmitter;
 
     constructor() {
         this._ready = false;
-        this.instance = axios.create();
-        this.emmiter = new EventEmitter();
+        this._instance = axios.create();
+        this._emmiter = new EventEmitter();
 
-        this.instance.interceptors.request.use(req => {
+        this._instance.interceptors.request.use(req => {
             if (!this._ready) throw new Error("Нет авторизации");
             req.headers = {
                 ...req.headers,
@@ -42,7 +42,7 @@ class API {
             const { accessToken, refreshToken } = res;
             this._accessToken = accessToken;
             this._refreshToken = refreshToken;
-            this.emmiter.emit("refresh", { accessToken, refreshToken });
+            this._emmiter.emit("refresh", { accessToken, refreshToken });
             req.response.config.headers["Authorization"] = `Bearer ${accessToken}`;
             return Promise.resolve();
         }).catch(err => {
@@ -50,7 +50,7 @@ class API {
             throw err;
         });
 
-        createAuthRefreshInterceptor(this.instance, refresh);
+        createAuthRefreshInterceptor(this._instance, refresh);
     }
 
     get loginDetails() {
@@ -69,8 +69,16 @@ class API {
         return this._ready;
     }
 
+    get instance() {
+        return this._instance;
+    }
+
+    get emmiter() {
+        return this._emmiter;
+    }
+
     destroy() {
-        this.emmiter.removeAllListeners();
+        this._emmiter.removeAllListeners();
     }
 
     setCredentials(options: { loginDetails: LoginDetails, accessToken: string, refreshToken: string }) {
@@ -80,65 +88,42 @@ class API {
         this._ready = true;
     }
 
-    async getPlaces(): Promise<SubscriberPlacesResponse> {
+    async getPlaces() {
         const url = "https://api-mh.ertelecom.ru/rest/v1/subscriberplaces";
 
-        return await this.instance.get(url).then(res => res.data);
+        return await this._instance.get(url).then(res => {
+            const { data }: SubscriberPlacesResponse = res.data;
+            return data.map(({ place }) => place);
+        });
+    }
+
+    async getPlace(placeId: number) {
+        return await this.getPlaces().then(places => {
+            const place = places.find(place => place.id === placeId);
+            if (!place) throw new Error("Место не существует");
+            return place;
+        });
     }
 
     async getProfile(): Promise<SubscriberProfileResponse> {
         const url = "https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles";
 
-        return await this.instance.get(url).then(res => res.data);
+        return await this._instance.get(url).then(res => res.data);
     }
 
     async getFinances(): Promise<SubscriberFinancesResponse> {
         const url = "https://api-mh.ertelecom.ru/rest/v1/subscribers/profiles/finances";
 
-        return await this.instance.get(url).then(res => res.data);
+        return await this._instance.get(url).then(res => res.data);
     }
 
-    async getForpostCameras(): Promise<ForpostCamerasResponse> {
+    async getForpostCameras() {
         const url = "https://api-mh.ertelecom.ru/rest/v1/forpost/cameras";
 
-        return await this.instance.get(url).then(res => res.data);
-    }
-
-    async getCameraSnapshot(cameraId: number) {
-        const url = `https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/snapshots`;
-
-        return await this.instance.get(url, { responseType: "stream" }).then(res => res.data);
-    }
-
-    async getCameraStream(cameraId: number) {
-        const url = `https://api-mh.ertelecom.ru/rest/v1/forpost/cameras/${cameraId}/video`;
-
-        return await this.instance.get(url)
-            .then(res => {
-                const { data } = res.data;
-                if (data.Error) throw new Error(data.Error);
-                return data.URL;
-            })
-            .catch((err: AxiosError) => {
-                const code = err.response?.status;
-                if (code === 500) throw new Error("Неправильный cameraId");
-                throw err;
-            });
-    }
-
-    async openAccessControl(placeId: number, accessControlId: number) {
-        const url = `https://api-mh.ertelecom.ru/rest/v1/places/${placeId}/accesscontrols/${accessControlId}/actions`;
-        const data = {
-            name: "accessControlOpen"
-        };
-
-        return await this.instance.post(url, data)
-            .then(() => Promise.resolve())
-            .catch((err: AxiosError) => {
-                const code = err.response?.status;
-                if (code === 500) throw new Error("Неправильный placeId или accessControlId");
-                throw err;
-            });
+        return await this._instance.get(url).then(res => {
+            const { data }: ForpostCamerasResponse = res.data;
+            return data;
+        });
     }
 
     async getOperators(): Promise<OperatorsResponse> {
@@ -149,6 +134,10 @@ class API {
     
     async getLoginDetails(phone: number) {
         const url = `https://api-mh.ertelecom.ru/auth/v2/login/${phone}`;
+        
+        const phoneString = phone.toString();
+        if (phoneString.length !== 11 && !(phoneString.startsWith("7") || phoneString.startsWith("8")))
+            throw new Error("Неправильный номер телефона");
 
         return await axios.get(url, { validateStatus: (status) => status === 200 || status === 300 })
             .then(res => {
@@ -157,7 +146,8 @@ class API {
             })
             .catch((err: AxiosError) => {
                 const code = err.response?.status;
-                if (code === 204) throw new Error("Неправильный номер");
+                if (code === 204) throw new Error("Договоры не найдены");
+                if (code === 400) throw new Error("Неправильный номер телефона");
                 throw err;
             });
     }
